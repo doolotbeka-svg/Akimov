@@ -44,14 +44,16 @@ let memoryCounter = 0;
 
 // ---------- Password ----------
 export function getEditPassword(): string | null {
-  const pw = process.env.EDIT_PASSWORD;
+  const pw = process.env.EDIT_PASSWORD?.trim();
   if (pw) return pw;
   // Only for local development: never used on Vercel, where the variable is set.
   return useBlob() ? null : process.env.DEV_EDIT_PASSWORD ?? null;
 }
 
-export async function checkPassword(candidate: string | null): Promise<boolean> {
+export async function checkPassword(raw: string | null): Promise<boolean> {
   const expected = getEditPassword();
+  // Stray spaces from copy-paste or phone keyboards shouldn't lock people out.
+  const candidate = raw?.trim() ?? null;
   if (!expected || !candidate) {
     await slowDown();
     return false;
