@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Camera, Link2, UserPlus, X } from 'lucide-react';
 import { FamilyMember, Gender, RelationType } from '../types/family';
 import { formatFullName, generateId, resizeImageToDataUrl } from '../utils/dateUtils';
+import { DateFields } from './DateFields';
 import { GenderAvatar } from './GenderAvatar';
 
 interface AddRelationModalProps {
@@ -309,20 +310,13 @@ export const AddRelationModal: React.FC<AddRelationModalProps> = ({
               </div>
 
               {/* Dates */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-end">
-                <div>
-                  <label className="block text-xs font-medium text-[#5E574E] mb-1">
-                    Дата рождения (год или ГГГГ-ММ-ДД)
-                  </label>
-                  <input
-                    type="text"
-                    value={birthDate}
-                    onChange={(e) => setBirthDate(e.target.value)}
-                    placeholder="1985"
-                    className="w-full px-3 py-2 text-sm bg-white border border-[#E6E0D5] rounded-lg tabular-nums focus:outline-none focus:border-[#2D5A4C]"
-                  />
-                </div>
-                <label className="flex items-center gap-2 py-2 cursor-pointer select-none">
+              <div className="space-y-3">
+                <DateFields
+                  label="Дата рождения (можно только год)"
+                  value={birthDate || undefined}
+                  onChange={(v) => setBirthDate(v ?? '')}
+                />
+                <label className="flex items-center gap-2 py-1 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={isLiving}
@@ -332,16 +326,11 @@ export const AddRelationModal: React.FC<AddRelationModalProps> = ({
                   <span className="text-sm text-[#26221E]">Жив(а) в настоящее время</span>
                 </label>
                 {!isLiving && (
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-[#5E574E] mb-1">Дата смерти</label>
-                    <input
-                      type="text"
-                      value={deathDate}
-                      onChange={(e) => setDeathDate(e.target.value)}
-                      placeholder="2020"
-                      className="w-full px-3 py-2 text-sm bg-white border border-[#E6E0D5] rounded-lg tabular-nums focus:outline-none focus:border-[#2D5A4C]"
-                    />
-                  </div>
+                  <DateFields
+                    label="Дата смерти (можно только год)"
+                    value={deathDate || undefined}
+                    onChange={(v) => setDeathDate(v ?? '')}
+                  />
                 )}
               </div>
 

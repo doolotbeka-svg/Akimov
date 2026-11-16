@@ -17,51 +17,110 @@ export function formatCardName(member: Pick<FamilyMember, 'firstName' | 'lastNam
   return [member.firstName, member.lastName].filter(Boolean).join(' ');
 }
 
-/**
- * Extracts 4-digit year from YYYY-MM-DD or YYYY string
- */
-export function extractYear(dateStr?: string): number | null {
-  if (!dateStr) return null;
-  const match = dateStr.trim().match(/^(\d{4})/);
-  return match ? parseInt(match[1], 10) : null;
+export const MONTHS_GENITIVE = [
+  'января',
+  'февраля',
+  'марта',
+  'апреля',
+  'мая',
+  'июня',
+  'июля',
+  'августа',
+  'сентября',
+  'октября',
+  'ноября',
+  'декабря',
+];
+
+export const MONTHS_NOMINATIVE = [
+  'Январь',
+  'Февраль',
+  'Март',
+  'Апрель',
+  'Май',
+  'Июнь',
+  'Июль',
+  'Август',
+  'Сентябрь',
+  'Октябрь',
+  'Ноябрь',
+  'Декабрь',
+];
+
+export interface DateParts {
+  year: number;
+  /** 1–12, or null when only the year is known */
+  month: number | null;
+  /** 1–31, or null when only the year is known */
+  day: number | null;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+function validParts(year: number, month: number, day: number): DateParts | null {
+  if (year < 1000 || year > 2999) return null;
+  if (month < 1 || month > 12) return null;
+  if (day < 1 || day > daysInMonth(year, month)) return null;
+  return { year, month, day };
 }
 
 /**
- * Formats YYYY-MM-DD or YYYY into a readable Russian date (e.g., "14 мая 1942" or "1942")
+ * Reads a date the way relatives actually type it:
+ * - "1985"                     → year only
+ * - "1985-07-05"               → ISO (what the app saves)
+ * - "05.07.1985", "5/7/1985"   → day.month.year
+ * - "1985.05.07"               → year.DAY.month — the convention used in this family
+ *                                (e.g. "2020.28.07"); if that is impossible, year.month.day
+ */
+export function parseDate(dateStr?: string): DateParts | null {
+  if (!dateStr) return null;
+  const s = dateStr.trim();
+
+  let m = s.match(/^(\d{4})$/);
+  if (m) {
+    const year = +m[1];
+    return year >= 1000 && year <= 2999 ? { year, month: null, day: null } : null;
+  }
+
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return validParts(+m[1], +m[2], +m[3]);
+
+  m = s.match(/^(\d{4})[./\s](\d{1,2})[./\s](\d{1,2})$/);
+  if (m) return validParts(+m[1], +m[3], +m[2]) ?? validParts(+m[1], +m[2], +m[3]);
+
+  m = s.match(/^(\d{1,2})[./\-\s](\d{1,2})[./\-\s](\d{4})$/);
+  if (m) return validParts(+m[3], +m[2], +m[1]);
+
+  return null;
+}
+
+/** Turns date parts into the stored form: "YYYY" or "YYYY-MM-DD". */
+export function formatStoredDate(parts: DateParts | null): string | undefined {
+  if (!parts) return undefined;
+  if (parts.month === null || parts.day === null) return String(parts.year);
+  const mm = String(parts.month).padStart(2, '0');
+  const dd = String(parts.day).padStart(2, '0');
+  return `${parts.year}-${mm}-${dd}`;
+}
+
+/**
+ * Extracts the year from any supported date format
+ */
+export function extractYear(dateStr?: string): number | null {
+  return parseDate(dateStr)?.year ?? null;
+}
+
+/**
+ * Formats a date into readable Russian (e.g., "14 мая 1942" or "1942")
  */
 export function formatRussianDate(dateStr?: string): string {
   if (!dateStr) return '';
-  const trimmed = dateStr.trim();
-  if (/^\d{4}$/.test(trimmed)) {
-    return trimmed;
-  }
-  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!isoMatch) return trimmed;
-
-  const year = parseInt(isoMatch[1], 10);
-  const month = parseInt(isoMatch[2], 10) - 1;
-  const day = parseInt(isoMatch[3], 10);
-
-  const months = [
-    'января',
-    'февраля',
-    'марта',
-    'апреля',
-    'мая',
-    'июня',
-    'июля',
-    'августа',
-    'сентября',
-    'октября',
-    'ноября',
-    'декабря',
-  ];
-
-  if (month < 0 || month > 11 || day < 1 || day > 31) {
-    return trimmed;
-  }
-
-  return `${day} ${months[month]} ${year}`;
+  const p = parseDate(dateStr);
+  if (!p) return dateStr.trim();
+  if (p.month === null || p.day === null) return String(p.year);
+  return `${p.day} ${MONTHS_GENITIVE[p.month - 1]} ${p.year}`;
 }
 
 /**
@@ -88,20 +147,12 @@ export function calculateAge(
   if (!birthDate) return null;
 
   const parseParts = (d: string) => {
-    const full = d.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (full) {
-      return {
-        year: parseInt(full[1], 10),
-        month: parseInt(full[2], 10) - 1,
-        day: parseInt(full[3], 10),
-        exact: true,
-      };
+    const p = parseDate(d);
+    if (!p) return null;
+    if (p.month !== null && p.day !== null) {
+      return { year: p.year, month: p.month - 1, day: p.day, exact: true };
     }
-    const yr = extractYear(d);
-    if (yr !== null) {
-      return { year: yr, month: 0, day: 1, exact: false };
-    }
-    return null;
+    return { year: p.year, month: 0, day: 1, exact: false };
   };
 
   const b = parseParts(birthDate);

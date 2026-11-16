@@ -17,7 +17,10 @@ import {
   LineageFilter,
   RelationType,
 } from './types/family';
+import { BirthdaysMenu } from './components/BirthdaysMenu';
+import { BirthdayTodayBanner } from './components/BirthdayTodayBanner';
 import { LoginModal } from './components/LoginModal';
+import { getUpcomingBirthdays } from './utils/birthdays';
 import { SyncNotice } from './components/SyncNotice';
 import { useSharedTree } from './hooks/useSharedTree';
 import { normalizeRelations } from './utils/exportImport';
@@ -54,6 +57,11 @@ function loadInitialTree(): FamilyTreeData {
   }
   // First visit: show a loading state until the shared tree arrives.
   return EMPTY_TREE;
+}
+
+function localDayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
 function addUnique(list: string[], id: string): string[] {
@@ -130,6 +138,19 @@ export default function App() {
 
   const selectedMember = selectedMemberId ? treeData.members[selectedMemberId] ?? null : null;
   const hasAnyMembers = Object.keys(treeData.members).length > 0;
+
+  // Re-evaluate birthdays when the calendar day changes (tab left open overnight).
+  const [dayKey, setDayKey] = useState(localDayKey);
+  useEffect(() => {
+    const t = setInterval(() => setDayKey(localDayKey()), 60 * 1000);
+    return () => clearInterval(t);
+  }, []);
+  const upcomingBirthdays = useMemo(
+    () => getUpcomingBirthdays(treeData.members, new Date()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [treeData.members, dayKey]
+  );
+  const todaysBirthdays = upcomingBirthdays.filter((b) => b.daysUntil === 0);
 
   // Centering is deferred until the layout containing the person is rendered.
   // Otherwise, when the filter switches to 'all', centering runs on the stale layout
@@ -346,6 +367,21 @@ export default function App() {
           setAnchorOverride(id)
         }
         onSelectAndCenter={handleSelectAndCenter}
+        extraActions={
+          hasAnyMembers ? (
+            <BirthdaysMenu
+              members={treeData.members}
+              upcoming={upcomingBirthdays}
+              onSelectMember={handleSelectAndCenter}
+            />
+          ) : null
+        }
+      />
+
+      <BirthdayTodayBanner
+        birthdays={todaysBirthdays}
+        dayKey={dayKey}
+        onSelectMember={handleSelectAndCenter}
       />
 
       <main className="flex-1 flex flex-col min-h-0 relative">

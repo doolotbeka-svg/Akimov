@@ -16,6 +16,8 @@ interface TreeToolbarProps {
   anchorPersonId: string | null;
   onAnchorPersonChange: (id: string) => void;
   onSelectAndCenter: (memberId: string) => void;
+  /** Extra controls shown before the lineage filter (e.g. birthdays). */
+  extraActions?: React.ReactNode;
 }
 
 export const TreeToolbar: React.FC<TreeToolbarProps> = ({
@@ -30,6 +32,7 @@ export const TreeToolbar: React.FC<TreeToolbarProps> = ({
   onAnchorPersonChange,
   onSelectAndCenter,
   canEdit,
+  extraActions,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -224,6 +227,7 @@ export const TreeToolbar: React.FC<TreeToolbarProps> = ({
 
           {/* Segmented Lineage Filter */}
           <div className="flex flex-wrap items-center gap-2">
+            {extraActions}
             <div
               role="group"
               aria-label="Фильтр по родовой линии"

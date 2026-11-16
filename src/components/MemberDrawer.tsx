@@ -19,12 +19,23 @@ import {
 import { FamilyMember, GalleryItem, Gender, RelationType } from '../types/family';
 import {
   calculateAge,
+  extractYear,
+  formatStoredDate,
+  parseDate,
   formatFullName,
   formatRussianDate,
   generateId,
   pluralizeYears,
   resizeImageToDataUrl,
 } from '../utils/dateUtils';
+import { DateFields } from './DateFields';
+
+/** Stores readable dates in one unambiguous form; keeps unreadable text as typed. */
+function normalizeDate(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  return formatStoredDate(parseDate(trimmed)) ?? trimmed;
+}
 import { GenderAvatar } from './GenderAvatar';
 
 interface MemberDrawerProps {
@@ -206,7 +217,8 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
       residence: draft.residence?.trim() || undefined,
       profession: draft.profession?.trim() || undefined,
       bio: draft.bio?.trim() || undefined,
-      deathDate: draft.isLiving ? undefined : draft.deathDate?.trim() || undefined,
+      birthDate: normalizeDate(draft.birthDate),
+      deathDate: draft.isLiving ? undefined : normalizeDate(draft.deathDate),
       facts: cleanedFacts,
     });
     setIsEditing(false);
@@ -472,21 +484,16 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
               </div>
 
               {/* Dates & Living status */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                <div>
-                  <label className="block text-xs font-medium text-[#5E574E] mb-1">
-                    Дата рождения (ГГГГ-ММ-ДД или год)
-                  </label>
-                  <input
-                    type="text"
-                    value={draft.birthDate ?? ''}
-                    onChange={(e) => setDraft({ ...draft, birthDate: e.target.value })}
-                    placeholder="Например: 1970-03-19"
-                    className="w-full px-3 py-2 text-sm bg-[#FAF8F5] border border-[#E6E0D5] rounded-lg tabular-nums focus:outline-none focus:border-[#2D5A4C]"
-                  />
-                </div>
+              <div className="space-y-3">
+                <DateFields
+                  key={`birth-${member.id}`}
+                  label="Дата рождения (можно только год)"
+                  tone="paper"
+                  value={draft.birthDate}
+                  onChange={(v) => setDraft((d) => (d ? { ...d, birthDate: v } : d))}
+                />
 
-                <label className="flex items-center gap-2.5 py-2 cursor-pointer select-none">
+                <label className="flex items-center gap-2.5 py-1 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={draft.isLiving}
@@ -499,18 +506,13 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
                 </label>
 
                 {!draft.isLiving && (
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-[#5E574E] mb-1">
-                      Дата смерти (ГГГГ-ММ-ДД или год)
-                    </label>
-                    <input
-                      type="text"
-                      value={draft.deathDate ?? ''}
-                      onChange={(e) => setDraft({ ...draft, deathDate: e.target.value })}
-                      placeholder="Например: 2016-11-03"
-                      className="w-full px-3 py-2 text-sm bg-[#FAF8F5] border border-[#E6E0D5] rounded-lg tabular-nums focus:outline-none focus:border-[#2D5A4C]"
-                    />
-                  </div>
+                  <DateFields
+                    key={`death-${member.id}`}
+                    label="Дата смерти (можно только год)"
+                    tone="paper"
+                    value={draft.deathDate}
+                    onChange={(v) => setDraft((d) => (d ? { ...d, deathDate: v } : d))}
+                  />
                 )}
               </div>
 
@@ -771,9 +773,9 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
                                   {formatFullName(relMember)}
                                 </div>
                                 <div className="text-xs text-[#8A8175] tabular-nums">
-                                  {relMember.birthDate ? relMember.birthDate.slice(0, 4) : '—'}
+                                  {extractYear(relMember.birthDate) ?? '—'}
                                   {!relMember.isLiving && relMember.deathDate
-                                    ? ` — ${relMember.deathDate.slice(0, 4)}`
+                                    ? ` — ${extractYear(relMember.deathDate) ?? '?'}`
                                     : ''}
                                 </div>
                               </div>
