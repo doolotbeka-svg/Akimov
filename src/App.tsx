@@ -20,6 +20,7 @@ import {
 import { BirthdaysMenu } from './components/BirthdaysMenu';
 import { BirthdayTodayBanner } from './components/BirthdayTodayBanner';
 import { LoginModal } from './components/LoginModal';
+import { PrintPreview } from './components/PrintPreview';
 import { getUpcomingBirthdays } from './utils/birthdays';
 import { SyncNotice } from './components/SyncNotice';
 import { useSharedTree } from './hooks/useSharedTree';
@@ -80,6 +81,14 @@ export default function App() {
     logout,
   } = useSharedTree(loadInitialTree);
   const [loginOpen, setLoginOpen] = useState(false);
+  // "?print" in the link opens the print preview right away (handy to send to relatives).
+  const [printOpen, setPrintOpen] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).has('print');
+    } catch {
+      return false;
+    }
+  });
   // "От кого" in the lineage filter is a personal view setting, not shared data.
   const [anchorOverride, setAnchorOverride] = useState<string | null>(null);
   const [lineageFilter, setLineageFilter] = useState<LineageFilter>('all');
@@ -342,6 +351,7 @@ export default function App() {
         syncStatus={syncStatus}
         onRequestLogin={() => setLoginOpen(true)}
         onLogout={logout}
+        onOpenPrint={() => setPrintOpen(true)}
         onOpenExportImport={(tab) => setExportImportModal({ open: true, tab })}
         onRequestReset={() => setResetModalOpen(true)}
         onAddNewMember={() =>
@@ -440,6 +450,20 @@ export default function App() {
         treeData={treeData}
         onClose={() => setExportImportModal((prev) => ({ ...prev, open: false }))}
         onImportTree={handleImportTree}
+      />
+
+      <PrintPreview
+        isOpen={printOpen && hasAnyMembers}
+        onClose={() => setPrintOpen(false)}
+        layout={treeLayout}
+        familyName={treeData.familyName}
+        subtitleNote={
+          lineageFilter === 'paternal'
+            ? 'по отцовской линии'
+            : lineageFilter === 'maternal'
+              ? 'по материнской линии'
+              : undefined
+        }
       />
 
       <LoginModal

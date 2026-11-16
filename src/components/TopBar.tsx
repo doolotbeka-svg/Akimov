@@ -6,6 +6,7 @@ import {
   LogOut,
   Menu,
   Plus,
+  Printer,
   RotateCcw,
   Upload,
   X,
@@ -17,6 +18,7 @@ interface TopBarProps {
   syncStatus: SyncStatus;
   onRequestLogin: () => void;
   onLogout: () => void;
+  onOpenPrint: () => void;
   onOpenExportImport: (initialTab: 'export' | 'import') => void;
   onRequestReset: () => void;
   onAddNewMember: () => void;
@@ -57,6 +59,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   syncStatus,
   onRequestLogin,
   onLogout,
+  onOpenPrint,
   onOpenExportImport,
   onRequestReset,
   onAddNewMember,
@@ -85,6 +88,10 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {/* Zone 2: Utility navigation (desktop) */}
         <nav className="hidden lg:flex items-center gap-7 text-sm font-medium text-[#5E574E]">
+          <button type="button" onClick={onOpenPrint} className={navLink}>
+            <Printer className="w-4 h-4" />
+            <span>Печать</span>
+          </button>
           <button type="button" onClick={() => onOpenExportImport('export')} className={navLink}>
             <Download className="w-4 h-4" />
             <span>Экспорт данных</span>
@@ -149,6 +156,10 @@ export const TopBar: React.FC<TopBarProps> = ({
       {/* Mobile navigation dropdown */}
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-[#E6E0D5] bg-white px-4 py-3 space-y-1 shadow-sm">
+          <button type="button" onClick={closeMenuThen(onOpenPrint)} className={mobileItem}>
+            <Printer className="w-4 h-4 text-[#2D5A4C]" />
+            <span>Печать древа / PDF</span>
+          </button>
           <button
             type="button"
             onClick={closeMenuThen(() => onOpenExportImport('export'))}

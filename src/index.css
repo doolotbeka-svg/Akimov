@@ -71,3 +71,36 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- Printing the tree (see PrintPreview) ---------- */
+@media print {
+  html.printing-tree,
+  html.printing-tree body,
+  html.printing-tree #root {
+    height: auto !important;
+    overflow: visible !important;
+    background: #FAF8F5 !important;
+  }
+  /* Only the sheet is printed; the rest of the app keeps its place but is invisible. */
+  html.printing-tree body * {
+    visibility: hidden !important;
+  }
+  html.printing-tree .print-sheet,
+  html.printing-tree .print-sheet * {
+    visibility: visible !important;
+  }
+  html.printing-tree .print-sheet {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+  }
+  /* Print at real size, not the on-screen preview scale. */
+  html.printing-tree .print-scale {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+  html.printing-tree * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
