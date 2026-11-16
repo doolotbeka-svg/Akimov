@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Maximize2, Minus, Plus, Sparkles, UserPlus } from 'lucide-react';
+import {
+  CloudOff,
+  Loader2,
+  Maximize2,
+  Minus,
+  Plus,
+  Sparkles,
+  UserPlus,
+} from 'lucide-react';
 import {
   CARD_HEIGHT,
   CARD_WIDTH,
@@ -28,6 +36,7 @@ interface FamilyTreeCanvasProps {
   onRestoreDemo: () => void;
   hasAnyMembers: boolean;
   canEdit: boolean;
+  loadState: 'loading' | 'offline' | 'ready';
 }
 
 const MIN_SCALE = 0.35;
@@ -46,6 +55,7 @@ export const FamilyTreeCanvas = React.forwardRef<FamilyTreeCanvasHandle, FamilyT
       onRestoreDemo,
       hasAnyMembers,
       canEdit,
+      loadState,
     },
     ref
   ) => {
@@ -301,7 +311,45 @@ export const FamilyTreeCanvas = React.forwardRef<FamilyTreeCanvasHandle, FamilyT
 
     const activeFocusId = hoveredMemberId || selectedMemberId;
 
-    // Empty state when user cleared the tree
+    // First visit: the shared tree is still on its way from the server.
+    if (!hasAnyMembers && loadState === 'loading') {
+      return (
+        <div
+          role="status"
+          className="relative flex-1 canvas-paper-grid flex flex-col items-center justify-center gap-3 p-6 text-sm text-[#5E574E]"
+        >
+          <Loader2 className="w-6 h-6 text-[#2D5A4C] animate-spin" aria-hidden="true" />
+          <span>Загружаем семейное древо…</span>
+        </div>
+      );
+    }
+
+    if (!hasAnyMembers && loadState === 'offline') {
+      return (
+        <div className="relative flex-1 canvas-paper-grid flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-white border border-[#E6E0D5] rounded-2xl p-8 text-center shadow-sm">
+            <div className="w-14 h-14 mx-auto mb-5 rounded-full bg-[#F6EAE4] text-[#B85D3B] flex items-center justify-center">
+              <CloudOff className="w-6 h-6" />
+            </div>
+            <h2 className="font-display text-2xl font-semibold text-[#26221E] mb-2">
+              Не удалось загрузить древо
+            </h2>
+            <p className="text-sm text-[#5E574E] leading-relaxed mb-6">
+              Похоже, нет связи с интернетом. Проверьте подключение и обновите страницу.
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-[#2D5A4C] hover:bg-[#23473C] text-white text-sm font-medium transition-colors cursor-pointer"
+            >
+              Обновить страницу
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Empty state when the tree has no people yet
     if (!hasAnyMembers) {
       return (
         <div className="relative flex-1 canvas-paper-grid flex items-center justify-center p-6">

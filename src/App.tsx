@@ -25,7 +25,12 @@ import { normalizeRelations } from './utils/exportImport';
 import { findDefaultAnchorId, getVisibleMemberIds } from './utils/lineageFilter';
 import { computeTreeLayout } from './utils/treeLayout';
 
-const STORAGE_KEY = 'semeyny_albom_family_tree_v1';
+// Local copy of the shared tree, so repeat visits show it instantly (and offline).
+// A new key on purpose: the old one ('..._family_tree_v1') could still hold the demo
+// family from before the tree was shared, which must never flash for visitors.
+const STORAGE_KEY = 'semeyny_albom_shared_tree_v2';
+
+const EMPTY_TREE: FamilyTreeData = { familyName: '', anchorPersonId: null, members: {} };
 
 function loadInitialTree(): FamilyTreeData {
   try {
@@ -46,9 +51,10 @@ function loadInitialTree(): FamilyTreeData {
       }
     }
   } catch {
-    // Fallback to demo data if localStorage is corrupted
+    // Corrupted cache — just wait for the server copy.
   }
-  return DEMO_FAMILY_DATA;
+  // First visit: show a loading state until the shared tree arrives.
+  return EMPTY_TREE;
 }
 
 function addUnique(list: string[], id: string): string[] {
@@ -363,6 +369,9 @@ export default function App() {
           }
           onRestoreDemo={handleRestoreDemo}
           hasAnyMembers={hasAnyMembers}
+          loadState={
+            syncStatus === 'loading' ? 'loading' : syncStatus === 'offline' ? 'offline' : 'ready'
+          }
           canEdit={canEdit}
         />
       </main>
