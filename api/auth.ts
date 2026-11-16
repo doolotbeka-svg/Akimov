@@ -1,4 +1,4 @@
-import { checkPassword, getEditPassword } from './_lib/treeStore';
+import { checkPassword, getEditPassword } from './_lib/treeStore.js';
 
 /**
  * POST /api/auth — checks the edit password (header `x-edit-password`).

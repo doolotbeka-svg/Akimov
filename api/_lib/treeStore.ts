@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { BlobPreconditionFailedError, get, put } from '@vercel/blob';
 import type { FamilyMember, FamilyTreeData } from '../../src/types/family';
-import { normalizeRelations } from '../../src/utils/exportImport';
+import { normalizeRelations } from '../../src/utils/exportImport.js';
 
 /**
  * Shared family tree storage.

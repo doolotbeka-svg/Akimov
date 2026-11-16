@@ -1,4 +1,4 @@
-import { FamilyMember, FamilyTreeData, GalleryItem } from '../types/family';
+import type { FamilyMember, FamilyTreeData, GalleryItem } from '../types/family';
 
 /**
  * Triggers a browser download for a Blob or string content

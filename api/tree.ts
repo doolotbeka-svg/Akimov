@@ -5,7 +5,7 @@ import {
   readTree,
   ValidationError,
   writeTree,
-} from './_lib/treeStore';
+} from './_lib/treeStore.js';
 
 /**
  * GET /api/tree  — public: anyone can view the shared tree.
