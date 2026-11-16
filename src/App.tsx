@@ -10,7 +10,6 @@ import { LightboxModal } from './components/LightboxModal';
 import { MemberDrawer } from './components/MemberDrawer';
 import { TopBar } from './components/TopBar';
 import { TreeToolbar } from './components/TreeToolbar';
-import { DEMO_FAMILY_DATA } from './data/demoFamily';
 import {
   FamilyMember,
   FamilyTreeData,
@@ -309,12 +308,6 @@ export default function App() {
     setLineageFilter('all');
   }, []);
 
-  const handleRestoreDemo = useCallback(() => {
-    editTree(DEMO_FAMILY_DATA);
-    setSelectedMemberId(null);
-    setLineageFilter('all');
-  }, []);
-
   const handleImportTree = useCallback((imported: FamilyTreeData) => {
     editTree(imported);
     setSelectedMemberId(null);
@@ -367,7 +360,6 @@ export default function App() {
           onAddFirstMember={() =>
             setAddModalState({ open: true, targetId: null, relation: null })
           }
-          onRestoreDemo={handleRestoreDemo}
           hasAnyMembers={hasAnyMembers}
           loadState={
             syncStatus === 'loading' ? 'loading' : syncStatus === 'offline' ? 'offline' : 'ready'

@@ -5,7 +5,6 @@ import {
   Maximize2,
   Minus,
   Plus,
-  Sparkles,
   UserPlus,
 } from 'lucide-react';
 import {
@@ -33,7 +32,6 @@ interface FamilyTreeCanvasProps {
   isFiltered: boolean;
   onSelectMember: (memberId: string) => void;
   onAddFirstMember: () => void;
-  onRestoreDemo: () => void;
   hasAnyMembers: boolean;
   canEdit: boolean;
   loadState: 'loading' | 'offline' | 'ready';
@@ -52,7 +50,6 @@ export const FamilyTreeCanvas = React.forwardRef<FamilyTreeCanvasHandle, FamilyT
       isFiltered,
       onSelectMember,
       onAddFirstMember,
-      onRestoreDemo,
       hasAnyMembers,
       canEdit,
       loadState,
@@ -373,14 +370,6 @@ export const FamilyTreeCanvas = React.forwardRef<FamilyTreeCanvasHandle, FamilyT
               >
                 <UserPlus className="w-4 h-4" />
                 <span>Добавить первого человека</span>
-              </button>
-              <button
-                type="button"
-                onClick={onRestoreDemo}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[#E6E0D5] bg-[#FAF8F5] hover:bg-[#F3EFE8] text-[#26221E] text-sm font-medium transition-colors cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4 text-[#B85D3B]" />
-                <span>Загрузить пример</span>
               </button>
             </div>
           </div>

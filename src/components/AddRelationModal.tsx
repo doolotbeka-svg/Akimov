@@ -242,7 +242,7 @@ export const AddRelationModal: React.FC<AddRelationModalProps> = ({
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Соколов"
+                    placeholder="Акимов"
                     className="w-full px-3 py-2 text-sm bg-white border border-[#E6E0D5] rounded-lg focus:outline-none focus:border-[#2D5A4C]"
                   />
                 </div>
@@ -255,7 +255,7 @@ export const AddRelationModal: React.FC<AddRelationModalProps> = ({
                     required
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="Иван"
+                    placeholder="Айбек"
                     autoFocus
                     className="w-full px-3 py-2 text-sm bg-white border border-[#E6E0D5] rounded-lg focus:outline-none focus:border-[#2D5A4C]"
                   />
@@ -266,7 +266,7 @@ export const AddRelationModal: React.FC<AddRelationModalProps> = ({
                     type="text"
                     value={middleName}
                     onChange={(e) => setMiddleName(e.target.value)}
-                    placeholder="Александрович"
+                    placeholder="Байназарович"
                     className="w-full px-3 py-2 text-sm bg-white border border-[#E6E0D5] rounded-lg focus:outline-none focus:border-[#2D5A4C]"
                   />
                 </div>
@@ -352,7 +352,7 @@ export const AddRelationModal: React.FC<AddRelationModalProps> = ({
                     type="text"
                     value={birthPlace}
                     onChange={(e) => setBirthPlace(e.target.value)}
-                    placeholder="Санкт-Петербург"
+                    placeholder="Бишкек"
                     className="w-full px-3 py-2 text-sm bg-white border border-[#E6E0D5] rounded-lg focus:outline-none focus:border-[#2D5A4C]"
                   />
                 </div>
