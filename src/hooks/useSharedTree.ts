@@ -41,6 +41,10 @@ export function useSharedTree(initial: () => FamilyTreeData) {
 
   const hasUnsaved = () => revisionRef.current !== savedRevisionRef.current;
 
+  // True when the server has no shared tree yet (nobody has published one).
+  const serverEmptyRef = useRef(false);
+  const publishLocalRef = useRef<() => void>(() => {});
+
   // ---------- Pull from server ----------
   const pull = useCallback(async () => {
     const remote = await fetchRemoteTree();
@@ -48,6 +52,7 @@ export function useSharedTree(initial: () => FamilyTreeData) {
       setStatus((s) => (s === 'loading' || s === 'synced' ? 'offline' : s));
       return;
     }
+    serverEmptyRef.current = remote.version === null;
     // Never overwrite local edits that are not saved yet.
     if (hasUnsaved() || savingRef.current) return;
     if (remote.version !== versionRef.current) {
@@ -55,6 +60,7 @@ export function useSharedTree(initial: () => FamilyTreeData) {
       if (remote.data) setTreeData(remote.data);
     }
     setStatus('synced');
+    publishLocalRef.current();
   }, []);
 
   useEffect(() => {
@@ -142,6 +148,21 @@ export function useSharedTree(initial: () => FamilyTreeData) {
     [scheduleSave]
   );
 
+  /**
+   * First publication: when the server is still empty and an editor is logged in,
+   * the tree kept in this browser (filled in before sharing existed) becomes the
+   * shared tree. If someone published first, the save gets a conflict and the
+   * server copy wins.
+   */
+  publishLocalRef.current = () => {
+    if (!passwordRef.current || !serverEmptyRef.current) return;
+    if (hasUnsaved() || savingRef.current) return;
+    if (Object.keys(treeRef.current.members).length === 0) return;
+    serverEmptyRef.current = false;
+    revisionRef.current += 1;
+    scheduleSave(0);
+  };
+
   // Warn before closing the tab with unsaved edits.
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -156,7 +177,9 @@ export function useSharedTree(initial: () => FamilyTreeData) {
     const result = await verifyPassword(candidate);
     if (result === 'ok') {
       storePassword(candidate);
+      passwordRef.current = candidate;
       setPassword(candidate);
+      publishLocalRef.current();
       setNotice(null);
       setStatus((s) => (s === 'error' ? 'synced' : s));
     }
