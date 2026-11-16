@@ -5,6 +5,7 @@ import { formatFullName, formatLifespan } from '../utils/dateUtils';
 import { GenderAvatar } from './GenderAvatar';
 
 interface TreeToolbarProps {
+  canEdit: boolean;
   familyName: string;
   onUpdateFamilyName: (name: string) => void;
   members: Record<string, FamilyMember>;
@@ -28,6 +29,7 @@ export const TreeToolbar: React.FC<TreeToolbarProps> = ({
   anchorPersonId,
   onAnchorPersonChange,
   onSelectAndCenter,
+  canEdit,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -92,7 +94,11 @@ export const TreeToolbar: React.FC<TreeToolbarProps> = ({
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-2.5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
         {/* Family Name & Quiet Metadata */}
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
-          {editingTitle ? (
+          {!canEdit ? (
+            <h1 className="font-display text-xl sm:text-2xl font-semibold text-[#26221E] truncate">
+              {familyName}
+            </h1>
+          ) : editingTitle ? (
             <div className="flex items-center gap-1.5">
               <input
                 type="text"

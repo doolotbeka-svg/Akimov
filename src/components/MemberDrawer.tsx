@@ -37,6 +37,7 @@ interface MemberDrawerProps {
   onOpenAddRelation: (targetMemberId: string, relation: RelationType) => void;
   onUnlinkRelation: (memberId: string, otherId: string, relation: RelationType) => void;
   onOpenLightbox: (item: GalleryItem) => void;
+  canEdit: boolean;
 }
 
 export const MemberDrawer: React.FC<MemberDrawerProps> = ({
@@ -49,6 +50,7 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
   onOpenAddRelation,
   onUnlinkRelation,
   onOpenLightbox,
+  canEdit,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -98,6 +100,15 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
     if (member) setDraft(cloneMember(member));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberId]);
+
+  // Leaving edit mode (logout or expired password) closes the form.
+  useEffect(() => {
+    if (!canEdit) {
+      setIsEditing(false);
+      setPendingGalleryFile(null);
+      setConfirmDelete(false);
+    }
+  }, [canEdit]);
 
   const cancelEdit = () => {
     if (member) setDraft(cloneMember(member));
@@ -228,7 +239,7 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
             {isEditing ? 'Редактирование карточки' : 'Страница альбома'}
           </div>
           <div className="flex items-center gap-2">
-            {!isEditing ? (
+            {!canEdit ? null : !isEditing ? (
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
@@ -285,7 +296,7 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
               <button
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-[#2D5A4C] hover:bg-[#23473C] text-white shadow-md flex items-center justify-center transition-colors cursor-pointer border-2 border-[#FAF8F5]"
+                className={`${canEdit ? "flex" : "hidden"} absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-[#2D5A4C] hover:bg-[#23473C] text-white shadow-md items-center justify-center transition-colors cursor-pointer border-2 border-[#FAF8F5]`}
                 title="Загрузить фотографию"
                 aria-label="Загрузить фотографию"
               >
@@ -341,7 +352,7 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
                 )}
               </div>
 
-              {current.avatar && (
+              {canEdit && current.avatar && (
                 <button
                   type="button"
                   onClick={handleRemoveAvatar}
@@ -354,7 +365,7 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
           </div>
 
           {/* Quick Relationship Action Bar */}
-          {!isEditing && (
+          {canEdit && !isEditing && (
             <div className="bg-white border border-[#E6E0D5] rounded-xl p-4">
               <div className="text-xs font-medium text-[#8A8175] mb-3">
                 Быстрое добавление связей в древо
@@ -770,7 +781,7 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
                             <button
                               type="button"
                               onClick={() => onUnlinkRelation(member.id, relMember.id, group.rel)}
-                              className="p-1.5 text-[#8A8175] hover:text-[#B85D3B] rounded-md cursor-pointer"
+                              className={`${canEdit ? '' : 'hidden'} p-1.5 text-[#8A8175] hover:text-[#B85D3B] rounded-md cursor-pointer`}
                               title="Убрать связь"
                               aria-label={`Убрать связь с ${relMember.firstName}`}
                             >
@@ -801,7 +812,7 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
               <button
                 type="button"
                 onClick={() => galleryInputRef.current?.click()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E6E0D5] bg-white hover:bg-[#FAF8F5] text-xs font-medium text-[#2D5A4C] transition-colors cursor-pointer"
+                className={`${canEdit ? 'inline-flex' : 'hidden'} items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E6E0D5] bg-white hover:bg-[#FAF8F5] text-xs font-medium text-[#2D5A4C] transition-colors cursor-pointer`}
               >
                 <ImagePlus className="w-3.5 h-3.5" />
                 <span>Добавить фото / документ</span>
@@ -894,6 +905,7 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
                         )}
                       </div>
                     </button>
+                    {canEdit && (
                     <button
                       type="button"
                       onClick={() => handleDeleteGalleryItem(item.id)}
@@ -902,6 +914,7 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -913,7 +926,7 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
           </div>
 
           {/* Danger Zone: Delete Member */}
-          <div className="pt-4 border-t border-[#E6E0D5]">
+          <div className={`${canEdit ? '' : 'hidden'} pt-4 border-t border-[#E6E0D5]`}>
             {!confirmDelete ? (
               <button
                 type="button"

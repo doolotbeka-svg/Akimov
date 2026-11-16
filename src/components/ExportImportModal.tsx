@@ -11,6 +11,7 @@ import {
 interface ExportImportModalProps {
   isOpen: boolean;
   initialTab: 'export' | 'import';
+  canImport: boolean;
   treeData: FamilyTreeData;
   onClose: () => void;
   onImportTree: (imported: FamilyTreeData) => void;
@@ -19,6 +20,7 @@ interface ExportImportModalProps {
 export const ExportImportModal: React.FC<ExportImportModalProps> = ({
   isOpen,
   initialTab,
+  canImport,
   treeData,
   onClose,
   onImportTree,
@@ -88,7 +90,9 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
         </div>
 
         <div className="p-6 space-y-5">
-          <div className="inline-flex w-full p-1 bg-[#F3EFE8] rounded-lg border border-[#E6E0D5]">
+          <div
+            className={`${canImport ? 'inline-flex' : 'hidden'} w-full p-1 bg-[#F3EFE8] rounded-lg border border-[#E6E0D5]`}
+          >
             <button
               type="button"
               onClick={() => {
@@ -119,10 +123,10 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             </button>
           </div>
 
-          {tab === 'export' ? (
+          {tab === 'export' || !canImport ? (
             <div className="space-y-3">
               <p className="text-sm text-[#5E574E] leading-relaxed">
-                Все изменения автоматически сохраняются в вашем браузере. Чтобы сделать архив на компьютере или передать альбом близким, скачайте файл:
+                Древо хранится на сервере и доступно всем родным по ссылке. Чтобы сделать архив на компьютере или передать альбом близким, скачайте файл:
               </p>
 
               <button
@@ -172,7 +176,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-[#5E574E] leading-relaxed">
-                Выберите ранее сохранённый файл формата <strong>.json</strong> или <strong>.csv</strong>. Текущее древо на экране будет заменено данными из файла.
+                Выберите ранее сохранённый файл формата <strong>.json</strong> или <strong>.csv</strong>. Общее древо будет заменено данными из файла — для всех, кто его смотрит.
               </p>
 
               <input

@@ -27,6 +27,7 @@ interface FamilyTreeCanvasProps {
   onAddFirstMember: () => void;
   onRestoreDemo: () => void;
   hasAnyMembers: boolean;
+  canEdit: boolean;
 }
 
 const MIN_SCALE = 0.35;
@@ -44,6 +45,7 @@ export const FamilyTreeCanvas = React.forwardRef<FamilyTreeCanvasHandle, FamilyT
       onAddFirstMember,
       onRestoreDemo,
       hasAnyMembers,
+      canEdit,
     },
     ref
   ) => {
@@ -311,9 +313,11 @@ export const FamilyTreeCanvas = React.forwardRef<FamilyTreeCanvasHandle, FamilyT
               Ваш семейный альбом пока пуст
             </h2>
             <p className="text-sm text-[#5E574E] leading-relaxed mb-6">
-              Начните летопись с первого человека — например, с себя, родителей или бабушки с дедушкой. После этого можно добавлять супругов, родителей и детей прямо из карточки.
+              {canEdit
+                ? 'Начните летопись с первого человека — например, с себя, родителей или бабушки с дедушкой. После этого можно добавлять супругов, родителей и детей прямо из карточки.'
+                : 'Родные ещё не добавили сюда ни одного человека. Загляните позже — древо появится, как только его начнут заполнять.'}
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className={`${canEdit ? 'flex' : 'hidden'} flex-col sm:flex-row items-center justify-center gap-3`}>
               <button
                 type="button"
                 onClick={onAddFirstMember}

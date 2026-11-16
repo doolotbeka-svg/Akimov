@@ -2,7 +2,53 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig, type Plugin} from 'vite';
+
+/**
+ * Serves the Vercel functions in /api during `npm run dev`, so the shared-tree
+ * API works locally too (with an in-memory store; set DEV_EDIT_PASSWORD to edit).
+ */
+function devApi(): Plugin {
+  const routes: Record<string, string> = {
+    '/api/tree': '/api/tree.ts',
+    '/api/auth': '/api/auth.ts',
+  };
+  return {
+    name: 'dev-vercel-api',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const pathname = (req.url ?? '').split('?')[0];
+        const file = routes[pathname];
+        if (!file) return next();
+        try {
+          const mod = await server.ssrLoadModule(file);
+          const handler = mod[req.method ?? 'GET'];
+          if (typeof handler !== 'function') {
+            res.statusCode = 405;
+            return res.end();
+          }
+          const chunks: Buffer[] = [];
+          for await (const chunk of req) chunks.push(chunk as Buffer);
+          const body = chunks.length ? Buffer.concat(chunks) : undefined;
+          const request = new Request(`http://localhost${req.url}`, {
+            method: req.method,
+            headers: req.headers as Record<string, string>,
+            body: req.method === 'GET' || req.method === 'HEAD' ? undefined : body,
+          });
+          const response: Response = await handler(request);
+          res.statusCode = response.status;
+          response.headers.forEach((value, key) => res.setHeader(key, value));
+          res.end(Buffer.from(await response.arrayBuffer()));
+        } catch (err) {
+          server.config.logger.error(String(err));
+          res.statusCode = 500;
+          res.end();
+        }
+      });
+    },
+  };
+}
 
 export default defineConfig(() => {
   return {
@@ -27,6 +73,7 @@ export default defineConfig(() => {
           }
         },
       },
+      devApi(),
     ],
     resolve: {
       alias: {

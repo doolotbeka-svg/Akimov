@@ -18,6 +18,9 @@ import {
   LineageFilter,
   RelationType,
 } from './types/family';
+import { LoginModal } from './components/LoginModal';
+import { SyncNotice } from './components/SyncNotice';
+import { useSharedTree } from './hooks/useSharedTree';
 import { normalizeRelations } from './utils/exportImport';
 import { findDefaultAnchorId, getVisibleMemberIds } from './utils/lineageFilter';
 import { computeTreeLayout } from './utils/treeLayout';
@@ -53,7 +56,19 @@ function addUnique(list: string[], id: string): string[] {
 }
 
 export default function App() {
-  const [treeData, setTreeData] = useState<FamilyTreeData>(loadInitialTree);
+  const {
+    treeData,
+    editTree,
+    canEdit,
+    status: syncStatus,
+    notice,
+    dismissNotice,
+    login,
+    logout,
+  } = useSharedTree(loadInitialTree);
+  const [loginOpen, setLoginOpen] = useState(false);
+  // "От кого" in the lineage filter is a personal view setting, not shared data.
+  const [anchorOverride, setAnchorOverride] = useState<string | null>(null);
   const [lineageFilter, setLineageFilter] = useState<LineageFilter>('all');
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [highlightedMemberId, setHighlightedMemberId] = useState<string | null>(null);
@@ -91,11 +106,12 @@ export default function App() {
   }, [highlightedMemberId]);
 
   const effectiveAnchorId = useMemo(() => {
+    if (anchorOverride && treeData.members[anchorOverride]) return anchorOverride;
     if (treeData.anchorPersonId && treeData.members[treeData.anchorPersonId]) {
       return treeData.anchorPersonId;
     }
     return findDefaultAnchorId(treeData.members);
-  }, [treeData.anchorPersonId, treeData.members]);
+  }, [anchorOverride, treeData.anchorPersonId, treeData.members]);
 
   const visibleMemberIds = useMemo(
     () => getVisibleMemberIds(treeData.members, lineageFilter, effectiveAnchorId),
@@ -139,7 +155,7 @@ export default function App() {
   }, [pendingCenterId, treeLayout]);
 
   const handleUpdateMember = useCallback((updated: FamilyMember) => {
-    setTreeData((prev) => ({
+    editTree((prev) => ({
       ...prev,
       members: {
         ...prev.members,
@@ -149,7 +165,7 @@ export default function App() {
   }, []);
 
   const handleDeleteMember = useCallback((memberId: string) => {
-    setTreeData((prev) => {
+    editTree((prev) => {
       const nextMembers: Record<string, FamilyMember> = {};
       for (const [id, m] of Object.entries(prev.members)) {
         if (id === memberId) continue;
@@ -216,7 +232,7 @@ export default function App() {
       newMember: FamilyMember,
       linkTo?: { targetId: string; relation: RelationType; alsoLinkSpouseId?: string }
     ) => {
-      setTreeData((prev) => {
+      editTree((prev) => {
         let nextMembers = {
           ...prev.members,
           [newMember.id]: newMember,
@@ -244,7 +260,7 @@ export default function App() {
 
   const handleLinkExisting = useCallback(
     (targetId: string, existingId: string, relation: RelationType) => {
-      setTreeData((prev) => ({
+      editTree((prev) => ({
         ...prev,
         members: linkPair(prev.members, targetId, existingId, relation),
       }));
@@ -254,7 +270,7 @@ export default function App() {
 
   const handleUnlinkRelation = useCallback(
     (memberId: string, otherId: string, relation: RelationType) => {
-      setTreeData((prev) => {
+      editTree((prev) => {
         const next = { ...prev.members };
         const a = next[memberId];
         const b = next[otherId];
@@ -278,7 +294,7 @@ export default function App() {
   );
 
   const handleClearTree = useCallback(() => {
-    setTreeData({
+    editTree({
       familyName: 'Моё родовое древо',
       anchorPersonId: null,
       members: {},
@@ -288,13 +304,13 @@ export default function App() {
   }, []);
 
   const handleRestoreDemo = useCallback(() => {
-    setTreeData(DEMO_FAMILY_DATA);
+    editTree(DEMO_FAMILY_DATA);
     setSelectedMemberId(null);
     setLineageFilter('all');
   }, []);
 
   const handleImportTree = useCallback((imported: FamilyTreeData) => {
-    setTreeData(imported);
+    editTree(imported);
     setSelectedMemberId(null);
     setLineageFilter('all');
   }, []);
@@ -302,6 +318,10 @@ export default function App() {
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#FAF8F5] text-[#26221E]">
       <TopBar
+        canEdit={canEdit}
+        syncStatus={syncStatus}
+        onRequestLogin={() => setLoginOpen(true)}
+        onLogout={logout}
         onOpenExportImport={(tab) => setExportImportModal({ open: true, tab })}
         onRequestReset={() => setResetModalOpen(true)}
         onAddNewMember={() =>
@@ -309,10 +329,13 @@ export default function App() {
         }
       />
 
+      {notice && <SyncNotice message={notice} onClose={dismissNotice} />}
+
       <TreeToolbar
+        canEdit={canEdit}
         familyName={treeData.familyName}
         onUpdateFamilyName={(name) =>
-          setTreeData((prev) => ({ ...prev, familyName: name }))
+          editTree((prev) => ({ ...prev, familyName: name }))
         }
         members={treeData.members}
         visibleCount={treeLayout.nodes.length}
@@ -321,7 +344,7 @@ export default function App() {
         onLineageFilterChange={setLineageFilter}
         anchorPersonId={effectiveAnchorId}
         onAnchorPersonChange={(id) =>
-          setTreeData((prev) => ({ ...prev, anchorPersonId: id }))
+          setAnchorOverride(id)
         }
         onSelectAndCenter={handleSelectAndCenter}
       />
@@ -340,10 +363,12 @@ export default function App() {
           }
           onRestoreDemo={handleRestoreDemo}
           hasAnyMembers={hasAnyMembers}
+          canEdit={canEdit}
         />
       </main>
 
       <MemberDrawer
+        canEdit={canEdit}
         member={selectedMember}
         allMembers={treeData.members}
         onClose={() => setSelectedMemberId(null)}
@@ -357,7 +382,7 @@ export default function App() {
         onOpenLightbox={(item) => setLightboxItem(item)}
       />
 
-      {addModalState.open && (
+      {addModalState.open && canEdit && (
         <AddRelationModal
           isOpen={addModalState.open}
           targetMember={
@@ -373,14 +398,21 @@ export default function App() {
 
       <ExportImportModal
         isOpen={exportImportModal.open}
-        initialTab={exportImportModal.tab}
+        initialTab={canEdit ? exportImportModal.tab : 'export'}
+        canImport={canEdit}
         treeData={treeData}
         onClose={() => setExportImportModal((prev) => ({ ...prev, open: false }))}
         onImportTree={handleImportTree}
       />
 
+      <LoginModal
+        isOpen={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        onLogin={login}
+      />
+
       <ConfirmResetModal
-        isOpen={resetModalOpen}
+        isOpen={resetModalOpen && canEdit}
         onClose={() => setResetModalOpen(false)}
         onConfirmClear={handleClearTree}
       />
