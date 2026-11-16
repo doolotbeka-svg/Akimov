@@ -175,11 +175,21 @@ export const FamilyTreeCanvas = React.forwardRef<FamilyTreeCanvasHandle, FamilyT
       });
     };
 
-    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      const factor = e.deltaY < 0 ? 1.1 : 0.9;
-      zoomBy(factor, e.clientX, e.clientY);
-    };
+    // React attaches wheel listeners as passive, so preventDefault() there is ignored
+    // (and logs a warning). Attach a native non-passive listener instead.
+    const zoomByRef = useRef(zoomBy);
+    zoomByRef.current = zoomBy;
+    useEffect(() => {
+      const el = containerRef.current;
+      if (!el) return;
+      const onWheel = (e: WheelEvent) => {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.1 : 0.9;
+        zoomByRef.current(factor, e.clientX, e.clientY);
+      };
+      el.addEventListener('wheel', onWheel, { passive: false });
+      return () => el.removeEventListener('wheel', onWheel);
+    }, [hasAnyMembers]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
       if (e.button !== 0) return;
@@ -329,7 +339,6 @@ export const FamilyTreeCanvas = React.forwardRef<FamilyTreeCanvasHandle, FamilyT
     return (
       <div
         ref={containerRef}
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={stopMouseDrag}

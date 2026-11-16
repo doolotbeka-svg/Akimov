@@ -1,4 +1,4 @@
-import { FamilyMember, FamilyTreeData } from '../types/family';
+import { FamilyMember, FamilyTreeData, GalleryItem } from '../types/family';
 
 /**
  * Triggers a browser download for a Blob or string content
@@ -12,7 +12,8 @@ function triggerDownload(content: string, filename: string, mimeType: string) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  // Revoke later: revoking synchronously can cancel the download in some browsers (Firefox/Safari)
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /**
@@ -90,6 +91,64 @@ export function exportTreeAsCsv(data: FamilyTreeData) {
 }
 
 /**
+ * Cleans relationship links: removes references to missing members and to self,
+ * removes duplicates and makes every link two-sided (parent<->child, spouse<->spouse).
+ * Protects the UI from broken or hand-edited files.
+ */
+export function normalizeRelations(
+  members: Record<string, FamilyMember>
+): Record<string, FamilyMember> {
+  const next: Record<string, FamilyMember> = {};
+  for (const [id, m] of Object.entries(members)) {
+    const clean = (ids: unknown) =>
+      Array.from(
+        new Set(
+          (Array.isArray(ids) ? ids : [])
+            .map(String)
+            .filter((x) => x !== id && Boolean(members[x]))
+        )
+      );
+    next[id] = {
+      ...m,
+      id,
+      facts: Array.isArray(m.facts) ? m.facts : [],
+      gallery: normalizeGallery(m.gallery),
+      parentIds: clean(m.parentIds),
+      spouseIds: clean(m.spouseIds),
+      childIds: clean(m.childIds),
+    };
+  }
+
+  const link = (list: string[], value: string) => {
+    if (!list.includes(value)) list.push(value);
+  };
+  for (const [id, m] of Object.entries(next)) {
+    for (const pid of m.parentIds) link(next[pid].childIds, id);
+    for (const cid of m.childIds) link(next[cid].parentIds, id);
+    for (const sid of m.spouseIds) link(next[sid].spouseIds, id);
+  }
+  return next;
+}
+
+function normalizeGallery(raw: unknown): GalleryItem[] {
+  if (!Array.isArray(raw)) return [];
+  const items: GalleryItem[] = [];
+  raw.forEach((g, idx) => {
+    if (!g || typeof g !== 'object') return;
+    const item = g as Partial<GalleryItem>;
+    if (typeof item.dataUrl !== 'string' || !item.dataUrl) return;
+    items.push({
+      id: item.id ? String(item.id) : `gal-imp-${idx}-${Math.random().toString(36).slice(2, 7)}`,
+      title: item.title ? String(item.title) : 'Семейный снимок',
+      date: item.date ? String(item.date) : undefined,
+      dataUrl: item.dataUrl,
+      kind: item.kind === 'document' ? 'document' : 'photo',
+    });
+  });
+  return items;
+}
+
+/**
  * Parses and validates imported JSON family tree data
  */
 export function parseImportedJson(rawText: string): FamilyTreeData {
@@ -103,7 +162,7 @@ export function parseImportedJson(rawText: string): FamilyTreeData {
     if (!item || typeof item !== 'object') continue;
     const m = item as Partial<FamilyMember>;
     normalizedMembers[id] = {
-      id: m.id || id,
+      id,
       firstName: String(m.firstName || 'Без имени'),
       lastName: String(m.lastName || ''),
       middleName: m.middleName ? String(m.middleName) : undefined,
@@ -118,7 +177,7 @@ export function parseImportedJson(rawText: string): FamilyTreeData {
       profession: m.profession ? String(m.profession) : undefined,
       bio: m.bio ? String(m.bio) : undefined,
       facts: Array.isArray(m.facts) ? m.facts.map(String) : [],
-      gallery: Array.isArray(m.gallery) ? m.gallery : [],
+      gallery: normalizeGallery(m.gallery),
       parentIds: Array.isArray(m.parentIds) ? m.parentIds.map(String) : [],
       spouseIds: Array.isArray(m.spouseIds) ? m.spouseIds.map(String) : [],
       childIds: Array.isArray(m.childIds) ? m.childIds.map(String) : [],
@@ -135,7 +194,7 @@ export function parseImportedJson(rawText: string): FamilyTreeData {
       typeof parsed.anchorPersonId === 'string' && normalizedMembers[parsed.anchorPersonId]
         ? parsed.anchorPersonId
         : Object.keys(normalizedMembers)[0],
-    members: normalizedMembers,
+    members: normalizeRelations(normalizedMembers),
   };
 }
 
@@ -213,7 +272,7 @@ export function parseImportedCsv(rawText: string): FamilyTreeData {
   return {
     familyName: 'Импортированное древо',
     anchorPersonId: Object.keys(members)[0],
-    members,
+    members: normalizeRelations(members),
   };
 }
 
