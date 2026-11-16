@@ -65,18 +65,44 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
+  const cloneMember = (m: FamilyMember): FamilyMember => ({
+    ...m,
+    facts: [...(m.facts || [])],
+    gallery: [...(m.gallery || [])],
+  });
+
+  // Reset all local UI state only when a different person is opened.
+  // (Previously this ran on every update of the same person, e.g. after adding
+  // a gallery photo or relative, and silently discarded unsaved edits.)
+  const memberId = member?.id ?? null;
   useEffect(() => {
-    if (member) {
-      setDraft({ ...member, facts: [...(member.facts || [])], gallery: [...(member.gallery || [])] });
-    } else {
-      setDraft(null);
-    }
     setIsEditing(false);
     setConfirmDelete(false);
     setUploadError(null);
     setPendingGalleryFile(null);
     setNewFact('');
-  }, [member]);
+  }, [memberId]);
+
+  // Keep the draft in sync with stored data while not editing.
+  useEffect(() => {
+    if (!member) {
+      setDraft(null);
+    } else if (!isEditing) {
+      setDraft(cloneMember(member));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [member, isEditing]);
+
+  // When switching to another person while in edit mode, take that person's data.
+  useEffect(() => {
+    if (member) setDraft(cloneMember(member));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberId]);
+
+  const cancelEdit = () => {
+    if (member) setDraft(cloneMember(member));
+    setIsEditing(false);
+  };
 
   if (!member || !draft) return null;
 
@@ -139,24 +165,20 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
       dataUrl: pendingGalleryFile,
       kind: galleryKind,
     };
-    const updated = {
-      ...draft,
-      gallery: [...(draft.gallery || []), item],
-    };
-    setDraft(updated);
-    onUpdateMember(updated);
+    // Persist only the gallery change on top of stored data, so unsaved
+    // form edits are not saved implicitly; keep them in the draft.
+    const nextGallery = [...(member.gallery || []), item];
+    onUpdateMember({ ...member, gallery: nextGallery });
+    setDraft({ ...draft, gallery: nextGallery });
     setPendingGalleryFile(null);
     setGalleryTitle('');
     setGalleryDate('');
   };
 
   const handleDeleteGalleryItem = (itemId: string) => {
-    const updated = {
-      ...draft,
-      gallery: (draft.gallery || []).filter((g) => g.id !== itemId),
-    };
-    setDraft(updated);
-    onUpdateMember(updated);
+    const nextGallery = (member.gallery || []).filter((g) => g.id !== itemId);
+    onUpdateMember({ ...member, gallery: nextGallery });
+    setDraft({ ...draft, gallery: nextGallery });
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
@@ -218,10 +240,7 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
             ) : (
               <button
                 type="button"
-                onClick={() => {
-                  setDraft({ ...member, facts: [...member.facts], gallery: [...member.gallery] });
-                  setIsEditing(false);
-                }}
+                onClick={cancelEdit}
                 className="px-3 py-1.5 rounded-lg border border-[#E6E0D5] bg-white hover:bg-[#FAF8F5] text-xs font-medium text-[#5E574E] transition-colors cursor-pointer"
               >
                 Отмена
@@ -588,7 +607,7 @@ export const MemberDrawer: React.FC<MemberDrawerProps> = ({
               <div className="pt-2 flex items-center justify-end gap-3 border-t border-[#F3EFE8]">
                 <button
                   type="button"
-                  onClick={() => setIsEditing(false)}
+                  onClick={cancelEdit}
                   className="px-4 py-2 rounded-lg border border-[#E6E0D5] text-sm font-medium text-[#5E574E] hover:bg-[#FAF8F5] cursor-pointer"
                 >
                   Отмена

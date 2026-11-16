@@ -18,6 +18,7 @@ import {
   LineageFilter,
   RelationType,
 } from './types/family';
+import { normalizeRelations } from './utils/exportImport';
 import { findDefaultAnchorId, getVisibleMemberIds } from './utils/lineageFilter';
 import { computeTreeLayout } from './utils/treeLayout';
 
@@ -29,7 +30,16 @@ function loadInitialTree(): FamilyTreeData {
     if (raw) {
       const parsed = JSON.parse(raw) as FamilyTreeData;
       if (parsed && typeof parsed === 'object' && parsed.members && typeof parsed.members === 'object') {
-        return parsed;
+        const members = normalizeRelations(parsed.members);
+        return {
+          familyName:
+            typeof parsed.familyName === 'string' && parsed.familyName.trim()
+              ? parsed.familyName
+              : 'Моё родовое древо',
+          anchorPersonId:
+            parsed.anchorPersonId && members[parsed.anchorPersonId] ? parsed.anchorPersonId : null,
+          members,
+        };
       }
     }
   } catch {
@@ -100,6 +110,11 @@ export default function App() {
   const selectedMember = selectedMemberId ? treeData.members[selectedMemberId] ?? null : null;
   const hasAnyMembers = Object.keys(treeData.members).length > 0;
 
+  // Centering is deferred until the layout containing the person is rendered.
+  // Otherwise, when the filter switches to 'all', centering runs on the stale layout
+  // (person missing) and the subsequent auto "fit to screen" overrides it.
+  const [pendingCenterId, setPendingCenterId] = useState<string | null>(null);
+
   const handleSelectAndCenter = useCallback(
     (memberId: string) => {
       if (!visibleMemberIds.has(memberId)) {
@@ -107,12 +122,21 @@ export default function App() {
       }
       setSelectedMemberId(memberId);
       setHighlightedMemberId(memberId);
-      requestAnimationFrame(() => {
-        canvasRef.current?.centerOnPerson(memberId);
-      });
+      setPendingCenterId(memberId);
     },
     [visibleMemberIds]
   );
+
+  useEffect(() => {
+    if (!pendingCenterId || !treeLayout.nodeMap[pendingCenterId]) return;
+    const id = pendingCenterId;
+    // Child effects (canvas auto-fit rAF) are scheduled before this one, so centering wins.
+    const raf = requestAnimationFrame(() => {
+      canvasRef.current?.centerOnPerson(id);
+      setPendingCenterId(null);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [pendingCenterId, treeLayout]);
 
   const handleUpdateMember = useCallback((updated: FamilyMember) => {
     setTreeData((prev) => ({

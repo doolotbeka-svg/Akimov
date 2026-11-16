@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Gender } from '../types/family';
 
 interface GenderAvatarProps {
@@ -24,6 +24,11 @@ export const GenderAvatar: React.FC<GenderAvatarProps> = ({
   className = '',
 }) => {
   const [imgError, setImgError] = useState(false);
+
+  // Reset error state when a new image source is provided (e.g. after re-upload)
+  useEffect(() => {
+    setImgError(false);
+  }, [src]);
 
   const sizeClass = SIZE_CLASSES[size];
   const hasValidImage = Boolean(src) && !imgError;
